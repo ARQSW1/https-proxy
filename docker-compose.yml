@@ -1,0 +1,60 @@
+services:
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+    depends_on:
+      - db
+    networks:
+      - internal
+
+  db:
+    image: mysql:5.7
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - internal
+
+  reverse_proxy:
+    image: nginx:latest
+    container_name: reverse_proxy
+    restart: always
+    ports:
+      - "8443:8443"
+      - "8080:8080"
+    volumes:
+      - ./proxy/certs:/etc/nginx/certs
+      - ./proxy/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - wordpress
+      - phpmyadmin
+    networks:
+      - internal
+      - external
+
+volumes:
+  db_data:
+
+networks:
+  internal: {}
+  external:
+    driver: bridge
